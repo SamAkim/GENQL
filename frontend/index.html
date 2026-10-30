@@ -1,0 +1,914 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GENQL — Agentic Text-to-SQL Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css?v=2.1" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/%3E%3C/svg%3E"
+    />
+    <script
+      src="https://cdn.jsdelivr.net/npm/chart.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/sweetalert2@11"
+      crossorigin="anonymous"
+    ></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+      crossorigin="anonymous"
+    />
+  </head>
+  <body>
+    <div id="auth-container" class="page-container">
+      <div class="auth-box">
+        <div class="auth-brand">
+          <div class="brand-badge"><i class="fas fa-bolt"></i> AGENTIC SQL</div>
+          <h1>GENQL</h1>
+          <p>Enterprise Model-Agnostic SQL Agent & RAG Studio</p>
+        </div>
+
+        <div class="auth-tabs">
+          <button id="show-login-tab" class="auth-tab-btn active"><i class="fas fa-sign-in-alt"></i> Login</button>
+          <button id="show-register-tab" class="auth-tab-btn"><i class="fas fa-user-plus"></i> Register</button>
+        </div>
+
+        <form id="login-form" class="auth-form">
+          <input
+            type="text"
+            id="login-username"
+            placeholder="Username"
+            required
+          />
+          <input
+            type="password"
+            id="login-password"
+            placeholder="Password"
+            required
+          />
+          <button type="submit">Login</button>
+        </form>
+
+        <form id="register-form" class="auth-form" style="display: none">
+          <input
+            type="text"
+            id="register-username"
+            placeholder="Choose a Username"
+            required
+          />
+          <input
+            type="password"
+            id="register-password"
+            placeholder="Create a Password"
+            required
+          />
+          <input
+            type="password"
+            id="register-confirm-password"
+            placeholder="Confirm Password"
+            required
+          />
+          <button type="submit">Register</button>
+        </form>
+        <div id="auth-error" class="error-message"></div>
+      </div>
+    </div>
+
+    <div id="app-wrapper" style="display: none">
+      <aside id="sidebar">
+        <div class="sidebar-header">
+          <div class="brand-title">
+            <div class="brand-logo"><i class="fas fa-layer-group"></i></div>
+            <div class="brand-text">
+              <h3>GENQL</h3>
+              <span class="brand-sub">Agentic SQL</span>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: center">
+            <button
+              id="theme-toggle-btn"
+              class="toggle-btn"
+              title="Toggle Dark/Light Mode"
+            >
+              <i class="fas fa-moon"></i>
+            </button>
+            <button id="sidebar-toggle" class="toggle-btn"><i class="fas fa-bars"></i></button>
+          </div>
+        </div>
+        <nav id="sidebar-nav">
+          <button id="sidebar-new-query-btn" class="new-query-btn"><i class="fas fa-plus"></i> New Query</button>
+          <button data-page="query" class="nav-btn active">
+            <i class="fas fa-terminal"></i> Query Studio
+          </button>
+          <button data-page="projects" class="nav-btn">
+            <i class="fas fa-folder-tree"></i> Manage Projects
+          </button>
+          <button data-page="query_history" class="nav-btn">
+            <i class="fas fa-history"></i> Query History
+          </button>
+          <button data-page="analytics" class="nav-btn admin-only">
+            <i class="fas fa-chart-line"></i> Analytics Dashboard
+          </button>
+          <button data-page="jira" class="nav-btn">
+            <i class="fab fa-jira"></i> Connect with Jira
+          </button>
+        </nav>
+        <div class="sidebar-footer">
+          <div id="user-info">
+            <div class="user-avatar"><i class="fas fa-user-shield"></i></div>
+            <div class="user-details">
+              <span class="user-label">Logged in as</span>
+              <span id="username-display" class="user-name"></span>
+            </div>
+          </div>
+          <button id="logout-btn" title="Logout">
+            <i class="fas fa-arrow-right-from-bracket"></i>
+          </button>
+        </div>
+      </aside>
+
+      <main id="main-content">
+        <div id="main-error" class="error-message"></div>
+
+        <div id="query-page" class="page-content">
+          <div class="studio-header">
+            <div class="studio-title">
+              <h2><i class="fas fa-bolt-lightning"></i> AI SQL Automation Studio</h2>
+              <p class="studio-subtitle">Multi-Agent LangGraph Orchestration & Autonomous SQL Synthesis</p>
+            </div>
+            <div class="model-badge-container">
+              <span class="model-badge"><span class="pulse-dot"></span> Multi-LLM Failover Active</span>
+            </div>
+          </div>
+
+          <div class="selector-container">
+            <div class="select-group">
+              <label for="query-project-selector"><i class="fas fa-folder"></i> Project</label>
+              <select
+                id="query-project-selector"
+                class="project-selector"
+              ></select>
+            </div>
+            <div class="select-group">
+              <label for="database-engine-selector"><i class="fas fa-database"></i> Database Engine</label>
+              <div class="db-selector-container">
+                <select id="database-engine-selector" class="engine-selector">
+                  <option value="">-- Select Database --</option>
+                  <option value="postgresql">PostgreSQL</option>
+                  <option value="mysql">MySQL</option>
+                  <option value="sqlserver">SQL Server</option>
+                  <option value="oracle">Oracle</option>
+                  <option value="sqlite">SQLite</option>
+                  <option value="snowflake">Snowflake</option>
+                  <option value="bigquery">BigQuery</option>
+                  <option value="redshift">Redshift</option>
+                </select>
+                <button
+                  id="db-connection-button"
+                  class="db-icon-button"
+                  title="Manage Database Connections"
+                >
+                  <i class="fas fa-plug"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div id="chat-container">
+            <div id="chat-messages"></div>
+          </div>
+          <form id="chat-form">
+            <div class="prompt-input-wrapper">
+              <textarea
+                id="chat-input"
+                placeholder="Ask in natural language (e.g., 'Find all users who made purchases over $100 last week')..."
+                rows="1"
+                autocomplete="off"
+                required
+              ></textarea>
+              <div class="chat-actions">
+                <button id="send-btn" type="submit" title="Send Query"><i class="fas fa-paper-plane"></i> Send</button>
+                <button id="stop-btn" type="button" style="display: none"><i class="fas fa-stop"></i> Stop</button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div id="projects-page" class="page-content" style="display: none">
+          <div class="page-header-row">
+            <h2><i class="fas fa-folder-tree"></i> Project Management</h2>
+          </div>
+          <div class="card create-project-card">
+            <div class="card-header-simple">
+              <div class="icon-circle"><i class="fas fa-folder-plus"></i></div>
+              <div>
+                <h3>Create a New Project</h3>
+                <p class="subtitle">Set up a workspace for your database schema, documents, and SQL queries</p>
+              </div>
+            </div>
+            <form id="create-project-form" class="inline-action-form">
+              <div class="input-with-icon">
+                <i class="fas fa-terminal input-icon"></i>
+                <input
+                  type="text"
+                  id="new-project-name"
+                  placeholder="Enter a descriptive project name..."
+                  required
+                />
+              </div>
+              <button type="submit" class="btn-primary">
+                <i class="fas fa-plus"></i> Create Project
+              </button>
+            </form>
+          </div>
+          <div class="section-title-row">
+            <h3><i class="fas fa-cubes"></i> Your Projects</h3>
+          </div>
+          <div id="projects-grid" class="grid-container"></div>
+
+          <div id="share-project-modal" class="modal" style="display: none">
+            <div class="modal-content">
+              <h3>Share Project</h3>
+              <p>
+                Share "<strong id="share-project-name"></strong>" with team
+                members:
+              </p>
+
+              <!-- Already shared users section -->
+              <div class="shared-users-section" style="display: none">
+                <h5>Already shared with:</h5>
+                <div class="shared-users-list"></div>
+              </div>
+
+              <div class="share-section">
+                <h4>Add Team Members</h4>
+                <div class="user-input-container">
+                  <input
+                    type="text"
+                    id="share-project-username-input"
+                    placeholder="Enter username"
+                  />
+                  <button id="add-project-user-btn">Add</button>
+                </div>
+                <div
+                  id="selected-project-users-list"
+                  class="selected-users"
+                ></div>
+              </div>
+
+              <div class="share-section">
+                <h4>Permission</h4>
+                <div class="permission-options">
+                  <label>
+                    <input
+                      type="radio"
+                      name="project-permission"
+                      value="user"
+                      checked
+                    />
+                    View & Edit
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="project-permission"
+                      value="admin"
+                    />
+                    Admin (Full Control)
+                  </label>
+                </div>
+              </div>
+
+              <div class="modal-actions">
+                <button id="confirm-project-share-btn">Share Project</button>
+                <button id="cancel-project-share-btn">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          id="project-detail-page"
+          class="page-content"
+          style="display: none"
+        >
+          <button id="back-to-projects-btn" class="back-btn">
+            ← Back to Projects
+          </button>
+          <h2 id="project-detail-title"></h2>
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="upload">
+              <span class="icon-upload"></span> Upload New Documents
+            </button>
+            <button class="tab-btn" data-tab="manage">
+              <span class="icon-document"></span> Manage Existing
+            </button>
+          </div>
+          <div id="upload-tab-content" class="tab-content">
+            <form id="upload-form" class="card">
+              <label for="file-upload"
+                >Upload (CSV, XLSX, PDF, DOCX, TXT)</label
+              >
+              <input type="file" id="file-upload" multiple />
+              <button type="submit">Upload and Process Files</button>
+            </form>
+          </div>
+          <div
+            id="manage-tab-content"
+            class="tab-content"
+            style="display: none"
+          >
+            <div id="document-list" class="card"></div>
+          </div>
+        </div>
+
+        <div id="query_history-page" class="page-content" style="display: none">
+          <h2><span class="icon-search"></span> Query History</h2>
+          <select id="history-project-selector"></select>
+          <select id="history-conversation-selector"></select>
+          <!-- Add this container for the continue button -->
+          <div
+            id="continue-conversation-container"
+            style="display: none; margin-bottom: 1rem"
+          >
+            <button id="continue-conversation-btn" class="back-btn">
+              Continue Conversation
+            </button>
+            <button id="share-conversation-btn" class="back-btn">
+              Share Conversation
+            </button>
+            <button id="delete-conversation-btn" class="back-btn">
+              🗑️ Delete Conversation
+            </button>
+          </div>
+
+          <!-- Add this after the continue-conversation-container -->
+          <div id="share-modal" class="modal" style="display: none">
+            <div class="modal-content">
+              <h3>Share Conversation</h3>
+              <p>Share this conversation with team members:</p>
+
+              <div class="share-section">
+                <h4>Add Team Members</h4>
+                <div class="user-input-container">
+                  <input
+                    type="text"
+                    id="share-username-input"
+                    placeholder="Enter username"
+                  />
+                  <button id="add-user-btn">Add</button>
+                </div>
+                <div id="selected-users-list" class="selected-users"></div>
+              </div>
+
+              <div class="share-section">
+                <h4>Permission</h4>
+                <div class="permission-options">
+                  <label>
+                    <input
+                      type="radio"
+                      name="permission"
+                      value="view"
+                      checked
+                    />
+                    View only
+                  </label>
+                  <label>
+                    <input type="radio" name="permission" value="edit" />
+                    Can edit
+                  </label>
+                </div>
+              </div>
+
+              <div class="modal-actions">
+                <button id="confirm-share-btn">Share</button>
+                <button id="cancel-share-btn">Cancel</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="history-transcript" class="card"></div>
+        </div>
+
+        <div id="analytics-page" class="page-content" style="display: none">
+          <h2><span class="icon-analytics"></span> Analytics Dashboard</h2>
+          <div id="kpi-container" class="grid-container"></div>
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="trends">
+              <span class="icon-trend"></span> Query & Project Trends
+            </button>
+            <button class="tab-btn" data-tab="user-analytics">
+              <span class="icon-user"></span> User Analytics
+            </button>
+            <button class="tab-btn" data-tab="query-analytics">
+              <span class="icon-search"></span> Query Analytics
+            </button>
+            <button class="tab-btn" data-tab="performance">
+              <span class="icon-performance"></span> Performance Metrics
+            </button>
+            <button class="tab-btn" data-tab="feedback">
+              <span class="icon-feedback"></span> Feedback Analysis
+            </button>
+          </div>
+
+          <!-- Existing tabs -->
+          <div id="trends-tab-content" class="tab-content chart-container card">
+            <div class="chart-wrapper">
+              <canvas id="query-trend-chart"></canvas>
+            </div>
+          </div>
+
+          <!-- New User Analytics Tab -->
+          <div
+            id="user-analytics-tab-content"
+            class="tab-content chart-container card"
+            style="display: none"
+          >
+            <div id="user-analytics-container" class="grid-container"></div>
+          </div>
+
+          <!-- New Query Analytics Tab -->
+          <div
+            id="query-analytics-tab-content"
+            class="tab-content chart-container card"
+            style="display: none"
+          >
+            <div id="query-analytics-container" class="grid-container"></div>
+          </div>
+
+          <div
+            id="performance-tab-content"
+            class="tab-content chart-container card"
+            style="display: none"
+          >
+            <div id="perf-kpi-container" class="grid-container"></div>
+          </div>
+          <div
+            id="feedback-tab-content"
+            class="tab-content chart-container card"
+            style="display: none"
+          >
+            <div class="chart-wrapper">
+              <canvas id="feedback-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add after your existing page-content divs -->
+        <div id="jira-page" class="page-content" style="display: none">
+          <h2><span class="icon-jira"></span> Jira Integration</h2>
+
+          <!-- Jira Connection Management -->
+          <div class="card">
+            <h3>Jira Connections</h3>
+            <div id="jira-connections-list"></div>
+
+            <h4>Add New Connection</h4>
+            <form id="jira-connect-form">
+              <input
+                type="url"
+                id="jira-url"
+                placeholder="Jira URL (e.g., https://your-domain.atlassian.net)"
+                required
+              />
+              <input
+                type="text"
+                id="jira-username"
+                placeholder="Email/Username"
+                required
+              />
+              <input
+                type="password"
+                id="jira-api-token"
+                placeholder="API Token"
+                required
+              />
+              <label>
+                <input type="checkbox" id="jira-is-default" /> Set as default
+                connection
+              </label>
+              <button type="submit">Connect to Jira</button>
+            </form>
+          </div>
+
+          <!-- Jira Projects and Issues Browser -->
+          <div class="card" id="jira-browser" style="display: none">
+            <h3>Jira Projects</h3>
+            <select id="jira-connection-selector"></select>
+
+            <!-- Add project filter section here -->
+            <div class="project-filter-section" style="margin: 1rem 0">
+              <div class="project-filter-controls">
+                <div class="search-filter">
+                  <input
+                    type="text"
+                    id="project-search"
+                    placeholder="Search projects by name or key..."
+                  />
+                  <button id="clear-project-search" class="clear-btn">×</button>
+                </div>
+                <div class="filter-actions" style="margin-top: 0.5rem">
+                  <button
+                    id="clear-project-filter"
+                    class="filter-btn clear"
+                    style="padding: 0.5rem 1rem; font-size: 0.85rem"
+                  >
+                    Clear Search
+                  </button>
+                  <span
+                    id="project-count"
+                    class="filter-count"
+                    style="font-size: 0.85rem"
+                  >
+                    Showing all projects
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div id="jira-projects-list" class="grid-container"></div>
+
+            <!-- Add this after the issues section in your jira-page div -->
+            <div id="jira-issues-section" style="display: none">
+              <div class="issues-header">
+                <h4>
+                  Issues in Project: <span id="current-project-name"></span>
+                </h4>
+
+                <!-- Filter Controls -->
+                <div id="jira-filter-controls" class="filter-controls">
+                  <!-- Quick Filters -->
+                  <div class="quick-filters">
+                    <div class="search-filter">
+                      <input
+                        type="text"
+                        id="issue-search"
+                        placeholder="Search issues..."
+                      />
+                      <button id="clear-search" class="clear-btn">×</button>
+                    </div>
+
+                    <div class="filter-group">
+                      <select id="status-filter" class="filter-select">
+                        <option value="">Status</option>
+                        <option value="Open">Open</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Resolved">Resolved</option>
+                        <option value="Closed">Closed</option>
+                        <option value="Reopened">Reopened</option>
+                        <option value="Done">Done</option>
+                        <option value="To Do">To Do</option>
+                      </select>
+
+                      <select id="priority-filter" class="filter-select">
+                        <option value="">Priority</option>
+                        <option value="Highest">Highest</option>
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                        <option value="Lowest">Lowest</option>
+                      </select>
+
+                      <select id="assignee-filter" class="filter-select">
+                        <option value="">Assignee</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Advanced Filters Toggle -->
+                  <div class="advanced-filters-toggle">
+                    <button id="toggle-advanced-filters">
+                      Advanced Filters ▼
+                    </button>
+                  </div>
+
+                  <!-- Advanced Filters (Hidden by default) -->
+                  <div
+                    id="advanced-filters"
+                    class="advanced-filters"
+                    style="display: none"
+                  >
+                    <div class="filter-row">
+                      <div class="filter-item">
+                        <label>Issue Type:</label>
+                        <select id="type-filter" class="filter-select">
+                          <option value="">Type</option>
+                          <option value="Bug">Bug</option>
+                          <option value="Task">Task</option>
+                          <option value="Story">Story</option>
+                          <option value="Epic">Epic</option>
+                          <option value="Sub-task">Sub-task</option>
+                        </select>
+                      </div>
+
+                      <div class="filter-item">
+                        <label>Reporter:</label>
+                        <select id="reporter-filter" class="filter-select">
+                          <option value="">Reporter</option>
+                        </select>
+                      </div>
+
+                      <div class="filter-item">
+                        <label>Labels:</label>
+                        <input
+                          type="text"
+                          id="labels-filter"
+                          placeholder="Enter labels (comma-separated)"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="filter-row">
+                      <div class="filter-item">
+                        <label>Created Date:</label>
+                        <div class="date-range">
+                          <input
+                            type="date"
+                            id="created-from"
+                            placeholder="From"
+                          />
+                          <span>to</span>
+                          <input type="date" id="created-to" placeholder="To" />
+                        </div>
+                      </div>
+
+                      <div class="filter-item">
+                        <label>Updated Date:</label>
+                        <div class="date-range">
+                          <input
+                            type="date"
+                            id="updated-from"
+                            placeholder="From"
+                          />
+                          <span>to</span>
+                          <input type="date" id="updated-to" placeholder="To" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="filter-row">
+                      <div class="filter-item">
+                        <label>
+                          <input type="checkbox" id="has-attachment" />
+                          Has Attachment
+                        </label>
+                      </div>
+
+                      <div class="filter-item">
+                        <label>Due Date:</label>
+                        <div class="date-range">
+                          <input type="date" id="due-from" placeholder="From" />
+                          <span>to</span>
+                          <input type="date" id="due-to" placeholder="To" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Filter Actions -->
+                  <div class="filter-actions">
+                    <button id="apply-filters" class="filter-btn apply">
+                      Apply Filters
+                    </button>
+                    <button id="clear-filters" class="filter-btn clear">
+                      Clear All
+                    </button>
+                    <span id="active-filters-count" class="filter-count"
+                      >0 filters active</span
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <!-- Active Filters Display -->
+              <div
+                id="active-filters-display"
+                class="active-filters"
+                style="display: none"
+              >
+                <div class="active-filters-header">
+                  <span>Active Filters:</span>
+                  <button id="clear-active-filters" class="clear-active-btn">
+                    Clear All
+                  </button>
+                </div>
+                <div class="active-filters-list"></div>
+              </div>
+
+              <!-- Issues List -->
+              <div id="jira-issues-list"></div>
+
+              <!-- No Results Message -->
+              <div
+                id="no-results-message"
+                class="no-results"
+                style="display: none"
+              >
+                <p>No issues found matching your filters.</p>
+                <button id="clear-filters-show-all" class="clear-btn">
+                  Clear filters to show all issues
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Import Modal -->
+          <div id="jira-import-modal" class="modal" style="display: none">
+            <div class="modal-content">
+              <h3>Import Jira Issue</h3>
+              <p>Import issue: <strong id="import-issue-key"></strong></p>
+
+              <div class="import-options">
+                <label class="Import-existing-label">
+                  <input
+                    type="radio"
+                    name="import-option"
+                    value="existing"
+                    checked
+                  />
+                  Import to existing project
+                </label>
+                <select id="existing-projects-select">
+                  <option value="">Select Project</option>
+                </select>
+
+                <label>
+                  <input type="radio" name="import-option" value="new" /> Create
+                  new project
+                </label>
+                <div id="new-project-section" style="display: none">
+                  <input
+                    type="text"
+                    id="new-project-name-input"
+                    placeholder="Enter new project name"
+                    required
+                  />
+                  <button type="button" id="create-project-btn">
+                    Create Project
+                  </button>
+                </div>
+              </div>
+
+              <div class="modal-actions">
+                <button id="confirm-import-btn">Import Issue</button>
+                <button id="cancel-import-btn">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Database Connection Modal -->
+        <div
+          id="db-connection-modal"
+          class="db-connection-modal"
+          style="display: none"
+        >
+          <div class="db-connection-content">
+            <div class="db-connection-header">
+              <h3><i class="fas fa-database"></i> Database Connections</h3>
+              <button id="close-db-modal" class="close-modal">×</button>
+            </div>
+
+            <div class="card" style="margin-bottom: 1.5rem">
+              <h4>Select Active Connection</h4>
+              <select
+                id="active-connection-selector"
+                class="connection-selector"
+              >
+                <option value="">-- No Connection (Disconnected) --</option>
+              </select>
+              <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem">
+                <i class="fas fa-info-circle"></i> Choose a connection to use
+                for SQL execution
+              </p>
+            </div>
+            <!-- Add New Connection Form -->
+            <div class="card">
+              <h4>Add New Connection</h4>
+              <form
+                id="db-connection-form"
+                class="db-connection-form"
+                novalidate
+              >
+                <input
+                  type="text"
+                  id="db-connection-name"
+                  placeholder="Connection Name (e.g., Production DB)"
+                />
+
+                <select id="db-type-select" required>
+                  <option value="">-- Select Database Type --</option>
+                  <option value="postgresql">PostgreSQL</option>
+                  <option value="mysql">MySQL</option>
+                  <option value="sqlserver">SQL Server</option>
+                  <option value="oracle">Oracle</option>
+                  <option value="sqlite">SQLite</option>
+                  <option value="snowflake">Snowflake</option>
+                  <option value="bigquery">BigQuery</option>
+                  <option value="redshift">Redshift</option>
+                </select>
+
+                <div class="form-row">
+                  <input
+                    type="text"
+                    id="db-host"
+                    placeholder="Host / Account"
+                  />
+                  <input
+                    type="number"
+                    id="db-port"
+                    placeholder="Port (optional)"
+                  />
+                </div>
+
+                <input
+                  type="text"
+                  id="db-database"
+                  placeholder="Database Name / Project ID"
+                />
+
+                <div class="form-row">
+                  <input
+                    type="text"
+                    id="db-username"
+                    placeholder="Username"
+                    required="false"
+                  />
+                  <input
+                    type="password"
+                    id="db-password"
+                    placeholder="Password / API Key"
+                    required="false"
+                  />
+                </div>
+
+                <div class="ssl-checkbox">
+                  <input type="checkbox" id="db-ssl" />
+                  <label for="db-ssl">Use SSL/TLS</label>
+                </div>
+
+                <div class="default-checkbox">
+                  <input type="checkbox" id="db-is-default" />
+                  <label for="db-is-default"
+                    >Set as default for this database type</label
+                  >
+                </div>
+
+                <button type="submit">Save Connection</button>
+              </form>
+            </div>
+
+            <!-- Saved Connections List -->
+            <div class="card">
+              <h4>Saved Connections</h4>
+              <div id="db-connections-list" class="connection-list">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Query Results Modal -->
+        <div
+          id="query-results-modal"
+          class="query-results-modal"
+          style="display: none"
+        >
+          <div class="results-content">
+            <div class="results-header">
+              <h3><i class="fas fa-table"></i> Query Results</h3>
+              <button id="close-results-modal" class="close-modal">×</button>
+            </div>
+            <div id="results-metadata" class="results-metadata"></div>
+            <div
+              id="results-table-container"
+              class="results-table-container"
+            ></div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div id="loader" style="display: none"></div>
+
+    <script src="script.js?v=2.1"></script>
+  </body>
+</html>
